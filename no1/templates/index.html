@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Hello</h1>
+    <form action="" method="post">
+
+        {{ form.hidden_tag() }}
+
+        <p>
+            {{ form.title.label }}<br>
+            {{ form.title(size=32) }}
+            {% for errors in form.title.errors %}
+            <span style="color: red;">[{{ errors }}]</span>
+            {% endfor %}
+        </p>
+
+        <p>
+            {{ form.post.label }}<br>
+            {{ form.post(size=32) }}
+            {% for errors in form.post.errors %}
+            <span style="color: red;">[{{ errors }}]</span>
+            {% endfor %}
+        </p>
+
+        <p>{{ form.submit() }}</p>
+    </form>
+    <div>
+        <p1>
+            {% with posts = dis_posts.query.all() %}
+                {% for post in posts %}
+                {{ [post.user_id, post.title, post.post] }}
+                {% endfor %}
+            {% endwith %}
+        </p1>
+    </div>
+{% endblock %}
