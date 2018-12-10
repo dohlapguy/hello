@@ -3,7 +3,7 @@ from datetime import datetime
 from flask import Flask, url_for, render_template, redirect, request, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_wtf import Form
+from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, TextAreaField, BooleanField
 from wtforms.validators import DataRequired, ValidationError, Email, EqualTo
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -30,18 +30,18 @@ def make_shell_context():
     return {'db': db, 'User': User, 'Post': Post}
 
 #       Form Code{
-class PostForm(Form):
+class PostForm(FlaskForm):
     title = StringField('Title', validators=[DataRequired()])
     post = TextAreaField('Post', validators=[DataRequired()])
-    submit = SubmitField('Submit')
+    submit = SubmitField('Post')
 
-class LoginForm(Form):
+class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
     remember_me = BooleanField('Remember me')
     submit = SubmitField('Login')
 
-class RegistrationForm(Form):
+class RegistrationForm(FlaskForm):
     username  = StringField('Username', validators=[DataRequired()])
     email  = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired()])
@@ -68,7 +68,7 @@ class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(50))
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
-    post = db.Column(db.String)
+    post = db.Column(db.Text)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
     def __repr__(self):
@@ -82,7 +82,7 @@ class User(UserMixin, db.Model):
     posts = db.relationship('Post', backref='author', lazy='dynamic')
 
     def __repr__(self):
-        return '<User {}>'.format(self.username)
+        return 'User-{}'.format(self.username)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -92,18 +92,23 @@ class User(UserMixin, db.Model):
 
 
 #       Routes Code{
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 @app.route('/index', methods=['GET', 'POST'])
 @login_required
 def index():
+    dposts = Post.query.all()
+    return render_template('index.html', dposts=dposts)
+
+@app.route('/create_post', methods=['GET', 'POST'])
+@login_required
+def create_post():
     form = PostForm()
     if form.validate_on_submit():
-        post = Post(title=form.title.data, post=form.post.data)
+        post = Post(title=form.title.data, post=form.post.data, author=current_user)
         db.session.add(post)
         db.session.commit()
-
-    dis_posts = Post()
-    return render_template('index.html', form=form, dis_posts=dis_posts)
+        flash('Post created!')
+    return render_template('create_post.html', form=form)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -132,7 +137,7 @@ def register():
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
-        flash('Account createds for {}'.format(user))
+        flash('Account created for {}'.format(user))
         return redirect('login')
     return render_template('register.html', form=form, title='Register')
 
